@@ -5,9 +5,7 @@ import com.EcomerceInventory.EcomerceInvetory.exception.ResourceNotFoundExceptio
 import com.EcomerceInventory.EcomerceInvetory.model.Cliente;
 import com.EcomerceInventory.EcomerceInvetory.model.TarjetaPuntos;
 import com.EcomerceInventory.EcomerceInvetory.repository.ClienteRepository;
-import com.EcomerceInventory.EcomerceInvetory.repository.TarjetaPuntosRepository;
 import com.EcomerceInventory.EcomerceInvetory.service.ClienteService;
-import com.EcomerceInventory.EcomerceInvetory.service.TarjetaPuntosService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,31 +13,30 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import static org.mockito.Mockito.*; // Para when, times, any, etc.
 import static org.junit.jupiter.api.Assertions.*; // Para assertThrows, assertEquals, etc.
 
+import java.util.List;
 import java.util.Optional; // ¡Vital para el findById!
-// Importa también tus clases: Cliente, ClienteDTO, ClienteRepository, ResourceNotFoundException
+
 
 @ExtendWith(MockitoExtension.class) // Inicializa los mocks de Mockito
 class ClienteServiceTest {
 
     @Mock
     private ClienteRepository clienteRepository; // Simulamos la base de datos
-
-    @Mock
-    private TarjetaPuntosRepository tarjetaPuntosRepository;
-
     @InjectMocks
     private ClienteService clienteService; // Inyecta el mock del repo en el servicio real
 
-    @InjectMocks
-    private TarjetaPuntosService tarjetaPuntosService;
 
 
     private Cliente clienteEjemplo;
     private ClienteDTO clienteDTOEjemplo;
-    private TarjetaPuntos tarjetaPuntosEjemplo;
 
     @BeforeEach
     void setUp() {
@@ -62,20 +59,7 @@ class ClienteServiceTest {
         clienteDTOEjemplo.setCorreo("juan@mail.com");
         clienteDTOEjemplo.setPasword("segura123");
 
-//        tarjetaPuntosEjemplo = new TarjetaPuntos();
-//        tarjetaPuntosEjemplo.setActivo(true);
-//        tarjetaPuntosEjemplo.setId(1L);
-//        tarjetaPuntosEjemplo.setPuntos(20);
-//        tarjetaPuntosEjemplo.setCliente(clienteEjemplo);
-//        tarjetaPuntosEjemplo.setCodigo("1L");
-
-
-
     }
-
-    // Aquí irán los tests...
-
-    //ClienteService
 
     //ConvertirADTO
     @Test
@@ -113,6 +97,7 @@ class ClienteServiceTest {
         assertNotNull(resultado, "El DTO no debería ser nulo");
 
         // Verificamos el objeto anidado
+
         assertNotNull(resultado.getTarjetaPuntos(), "El DTO debería contener la tarjeta de puntos");
         assertEquals(100, resultado.getTarjetaPuntos(), "Los puntos deben coincidir");
         assertEquals("GOLD-2026", resultado.getTarjetaCodigo(), "El código de tarjeta debe coincidir");
@@ -122,41 +107,503 @@ class ClienteServiceTest {
         assertEquals(clienteEjemplo.getNombre(), resultado.getNombre(), "El nombre del cliente debe ser igual");
     }
 
-    //Verifica que de error el buscar un Id que no existe
+    //Paginacion de clientes
     @Test
-    @DisplayName("Debería lanzar ResourceNotFoundException cuando el ID no existe")
-    void listarClienteIdFallaTest() {
-        // Arrange
-        Long idInexistente = 99L;
-        when(clienteRepository.findById(idInexistente)).thenReturn(Optional.empty());
+    @DisplayName("Debería retornar una página de clientes correctamente")
+    void listarPaginaClienteTest() {
+        // 1. ARRANGE
+        int pagina = 0;
+        int tamano = 10;
 
-        // Act & Assert
+        // Creamos una lista con nuestro cliente de ejemplo
+        List<Cliente> listaClientes = List.of(clienteEjemplo);
+
+        // Creamos el objeto Page que el repositorio debería devolver
+        // PageImpl necesita: la lista, el objeto pageable y el total de elementos
+        Page<Cliente> paginaSimulada = new PageImpl<>(
+                listaClientes,
+                PageRequest.of(pagina, tamano),
+                listaClientes.size()
+        );
+
+        // EL GUION: Cuando se llame a findAll con CUALQUIER Pageable, devuelve nuestra página
+        when(clienteRepository.findAll(any(Pageable.class))).thenReturn(paginaSimulada);
+
+        // 2. ACT
+        Page<ClienteDTO> resultado = clienteService.listarPaginaCliente(pagina, tamano);
+
+        // 3. ASSERT
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements(), "Debería haber 1 elemento en la página");
+        assertEquals("Juan Perez", resultado.getContent().getFirst().getNombre());
+
+        // Verificamos que se llamó al repositorio con la configuración correcta
+        verify(clienteRepository).findAll(any(Pageable.class));
+    }
+
+    //Busqueda por id
+    @Test
+    @DisplayName("Busqueda exitosa de cliente por id")
+    void clienteIdExistenteTest(){
+        //Arranque
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+        ClienteDTO respuesta = clienteService.listarClienteId(1L);
+        //Actuar, Acertar
+        assertNotNull(respuesta, "El cliente no fue traido");
+        assertEquals(respuesta.getIdentificacion(), clienteEjemplo.getIdentificacion(), "El cliente traido no es el mismo");
+    }
+
+    @Test
+    @DisplayName("Busqueda falla de clente por id")
+    void clienteIdInexistenteTest(){
+        Long IdInvalido = 376L;
+        when(clienteRepository.findById(IdInvalido)).thenReturn(Optional.empty());
+
         assertThrows(ResourceNotFoundException.class, () -> {
-            clienteService.listarClienteId(idInexistente);
+            clienteService.listarClienteId(IdInvalido);
         });
     }
 
-
+    //Busqueda por Nombre
     @Test
-    @DisplayName("No debe cambiar la edad si el DTO trae un menor de edad")
-    void actualizarClienteEdadFallaTest() {
+    @DisplayName("Busqueda exitosa clientes por nombre")
+    void clienteExitoNombreTest(){
         //Arrancar
-        ClienteDTO clienteInvalido = new ClienteDTO();
+        String nombre = "Juan";
 
-        clienteInvalido.setEdad(16);
+        when(clienteRepository.findByNombreStartingWith(nombre)).thenReturn(List.of(clienteEjemplo));
+
+        //Actuar
+        List<ClienteDTO> resultado = clienteService.listarClienteNombre(nombre);
+
+        //Acertar
+        assertNotNull(resultado, "La lista no debe ser nula");
+        assertEquals(1, resultado.size(), "Deberia haber solo un cliente");
+        assertEquals("Juan Perez", resultado.getFirst().getNombre(), "El nombre no coincide con el mapeo original");
+
+        verify(clienteRepository).findByNombreStartingWith(nombre);
+    }
+
+    //Busqueda por nombre y activo
+    @Test
+    @DisplayName("Busqueda de clientes por nombre y activo")
+    void clienteNombreActivoTest() {
+        //Arrancar
+        String nombre = "Juan";
+        Boolean activo = true;
+
+        when(clienteRepository.findClienteByActivoAndNombreStartingWith(activo, nombre)).thenReturn(List.of(clienteEjemplo));
+
+        //Actuar
+        List<ClienteDTO> respuesta = clienteService.listarClienteNombreActivo(nombre,activo);
+
+        //Verificar
+        assertNotNull(respuesta, "La lista no puede ser nula");
+        assertEquals(1, respuesta.size());
+        assertEquals("Juan Perez", respuesta.getFirst().getNombre());
+        assertEquals(true, respuesta.getFirst().getActivo());
+
+        verify(clienteRepository).findClienteByActivoAndNombreStartingWith(activo,nombre);
+    }
+
+    //Crear cliente
+    @Test
+    @DisplayName("Crear cliente")
+    void crearClienteDatosValidosTest(){
+        //Arrancar
+        //Guardado
+        ClienteDTO clienteNuevoDTO = new ClienteDTO();
+        clienteNuevoDTO.setActivo(true);
+        clienteNuevoDTO.setNombre("Jero");
+        clienteNuevoDTO.setIdentificacion("123456");
+        clienteNuevoDTO.setEdad(25);
+        clienteNuevoDTO.setCorreo("jero@mail.com");
+        clienteNuevoDTO.setPasword("segura123");
+
+        //Devuelto
+        Cliente clienteNuevo = new Cliente();
+        clienteNuevo.setId(100L);
+        clienteNuevo.setActivo(true);
+        clienteNuevo.setNombre("Jero");
+        clienteNuevo.setIdentificacion("123456");
+        clienteNuevo.setEdad(25);
+        clienteNuevo.setCorreo("jero@mail.com");
+        clienteNuevo.setPasword("segura123");
+
+
+
+        when(clienteRepository.save(any(Cliente.class))).thenReturn(clienteNuevo);
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.crearCliente(clienteNuevoDTO);
+
+        //Acertar
+        assertNotNull(respuesta, "El guardado no puede ser nulo");
+        assertEquals("123456", respuesta.getIdentificacion());
+        assertEquals("Jero", respuesta.getNombre());
+
+        verify(clienteRepository, times(1)).save(any(Cliente.class));
+
+    }
+
+    //Actaulizar Cliente
+    //Nombre
+    @Test
+    @DisplayName("No debe cambiar el nombre cuando es nullo")
+    void actualizarClienteNombreNuloFallaTest(){
+        //Arrancar
+        String nombreOriginal = clienteEjemplo.getNombre();
+        clienteDTOEjemplo.setNombre(null);
 
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
 
         //Actuar
-        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteInvalido);
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
 
-        //Acierta
+        //Acertar
+        assertEquals(nombreOriginal, respuesta.getNombre());
 
-        assertEquals(25, respuesta.getEdad(), "La edad no debio cambiar porque 15 es menor que 18");
-        //Se guardo de todos modos? si pues debido a que se guardan los datos validos
         verify(clienteRepository).save(any(Cliente.class));
-
     }
+    @Test
+    @DisplayName("No debe cambiar el nombre cuando esta vacio")
+    void actualizarClienteNombreVacioFallaTest(){
+        //Arrancar
+        String nombreOriginal = clienteEjemplo.getNombre();
+        clienteDTOEjemplo.setNombre("");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(nombreOriginal, respuesta.getNombre());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("No debe cambiar el nombre cuando tiene espacios en blanco")
+    void actualizarClienteNombreEspacioFallaTest(){
+        //Arrancar
+        String nombreOriginal = clienteEjemplo.getNombre();
+        clienteDTOEjemplo.setNombre("       ");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(nombreOriginal, respuesta.getNombre());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("El nombre cambia cuando es valido")
+    void actualizarClienteNombreExitoTest(){
+        //Arrancar
+        clienteDTOEjemplo.setNombre("Jeronimo");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals("Jeronimo", respuesta.getNombre(), "El nombre no se actualizo");
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+
+    //Identificiacion
+    @Test
+    @DisplayName("No debe cambiar la identificacion cuando es nullo")
+    void actualizarClienteIdentificacionNulaFallaTest(){
+        //Arrancar
+        String identificacionOriginal = clienteEjemplo.getIdentificacion();
+        clienteDTOEjemplo.setIdentificacion(null);
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(identificacionOriginal, respuesta.getIdentificacion());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("No debe cambiar la identifiacion cuando esta vacio")
+    void actualizarClienteIdentificacionVacioFallaTest(){
+        //Arrancar
+        String identificacionOriginal = clienteEjemplo.getIdentificacion();
+        clienteDTOEjemplo.setIdentificacion("");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(identificacionOriginal, respuesta.getIdentificacion());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("No debe cambiar la identificacion cuando tiene espacios en blanco")
+    void actualizarClienteIdentificacionEspacioFallaTest(){
+        //Arrancar
+        String identificacionOriginal = clienteEjemplo.getIdentificacion();
+        clienteDTOEjemplo.setIdentificacion("       ");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(identificacionOriginal, respuesta.getIdentificacion());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("La identificacion cambia cuando es valido")
+    void actualizarClienteIdentificacionExitoTest(){
+        //Arrancar
+        clienteDTOEjemplo.setIdentificacion("4321");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals("4321", respuesta.getIdentificacion(), "La identificacion no se actualizo");
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+
+    //Correo
+    @Test
+    @DisplayName("No debe cambiar el Correo cuando es nullo")
+    void actualizarClienteCorreoNulaFallaTest(){
+        //Arrancar
+        String correoOriginal = clienteEjemplo.getCorreo();
+        clienteDTOEjemplo.setCorreo(null);
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(correoOriginal, respuesta.getCorreo());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("No debe cambiar el correo cuando esta vacio")
+    void actualizarClienteCorreoVacioFallaTest(){
+        //Arrancar
+        String correoOriginal = clienteEjemplo.getCorreo();
+        clienteDTOEjemplo.setCorreo("");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(correoOriginal, respuesta.getCorreo());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("No debe cambiar el Correo cuando tiene espacios en blanco")
+    void actualizarClienteCorreoEspacioFallaTest(){
+        //Arrancar
+        String correoOriginal = clienteEjemplo.getCorreo();
+        clienteDTOEjemplo.setCorreo("       ");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(correoOriginal, respuesta.getCorreo());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("El Correo cambia cuando es valido")
+    void actualizarClienteCorreoExitoTest(){
+        //Arrancar
+        clienteDTOEjemplo.setCorreo("4321");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals("4321", respuesta.getCorreo(), "La Correo no se actualizo");
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+
+    //Pasword
+    @Test
+    @DisplayName("No debe cambiar la pasword cuando es nullo")
+    void actualizarClientePaswordNulaFallaTest(){
+        //Arrancar
+        String paswordOriginal = clienteEjemplo.getPasword();
+        clienteDTOEjemplo.setPasword(null);
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(paswordOriginal, respuesta.getPasword());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("No debe cambiar la pasword cuando esta vacio")
+    void actualizarClientePaswordVacioFallaTest(){
+        //Arrancar
+        String paswordOriginal = clienteEjemplo.getPasword();
+        clienteDTOEjemplo.setPasword("");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(paswordOriginal, respuesta.getPasword());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("No debe cambiar la pasword cuando tiene espacios en blanco")
+    void actualizarClientePaswordEspacioFallaTest(){
+        //Arrancar
+        String paswordOriginal = clienteEjemplo.getPasword();
+        clienteDTOEjemplo.setPasword("       ");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(paswordOriginal, respuesta.getPasword());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("La pasword cambia cuando es valido")
+    void actualizarClientePaswordExitoTest(){
+        //Arrancar
+        clienteDTOEjemplo.setPasword("4321");
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals("4321", respuesta.getPasword(), "La pasword no se actualizo");
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+
+
+    //Edad
+    @Test
+    @DisplayName("No debe cambiar la edad cuando es nula")
+    void actualizarClienteEdadNuloFallaTest() {
+        //Actuar
+        Integer edadOriginal = clienteEjemplo.getEdad();
+        clienteDTOEjemplo.setEdad(null);
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(edadOriginal, respuesta.getEdad());
+
+        verify(clienteRepository).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("No debe cambiar la edad cuando es menor de edad")
+    void actualizarClienteEdadMenorFallaTest() {
+        //Arrancar
+        Integer edadOriginal = clienteEjemplo.getEdad();
+        clienteDTOEjemplo.setEdad(16);
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertEquals(edadOriginal, respuesta.getEdad());
+
+        verify(clienteRepository, times(1)).save(any(Cliente.class));
+    }
+
+    //Activo
+    @Test
+    @DisplayName("No debe cambiar el activo cuando es null")
+    void actualizarClienteActivoFallaTest() {
+        //Arrancar
+        Boolean activoOriginal = clienteEjemplo.getActivo();
+        clienteDTOEjemplo.setActivo(null);
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertTrue(respuesta.getActivo());
+
+        verify(clienteRepository, times(1)).save(any(Cliente.class));
+    }
+    @Test
+    @DisplayName("Debe cambiar el estado de true a false")
+    void actualizarClienteActivoExitoTest() {
+        //Arrancar
+        clienteDTOEjemplo.setActivo(false);
+
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(clienteEjemplo));
+
+        //Actuar
+        ClienteDTO respuesta = clienteService.actualizarCliente(1L, clienteDTOEjemplo);
+
+        //Acertar
+        assertFalse(respuesta.getActivo());
+
+        verify(clienteRepository, times(1)).save(any(Cliente.class));
+    }
+
+
+
+
+
+
+
+
+
+
 
 
 
