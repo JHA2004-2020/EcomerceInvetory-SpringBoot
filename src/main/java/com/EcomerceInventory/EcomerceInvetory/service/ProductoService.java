@@ -41,10 +41,7 @@ public class ProductoService {
     public Page<ProductoDTO> listarPaginaProducto(int numeroPagina, int size){
         Pageable paginacion = PageRequest.of(numeroPagina, size, Sort.by("categoria_id").ascending());
         Page<Producto> paginaProductos = productoRepository.findAll(paginacion);
-        if (paginaProductos.isEmpty()){
-            throw new ResourceNotFoundException("No hay productos de momento");
-        }
-        return paginaProductos.map(producto -> convertirADTO(producto));
+        return paginaProductos.map(this::convertirADTO);
     }
 
     //Listar producto por id

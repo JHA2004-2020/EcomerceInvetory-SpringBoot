@@ -89,38 +89,20 @@ public class ClienteService {
     public ClienteDTO actualizarCliente(Long id, ClienteDTO dto){
         Cliente cliente = clienteRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
-        if(dto.getNombre() != null){
-            if (!dto.getNombre().isEmpty()){
-                if (!dto.getNombre().isBlank()){
-                    cliente.setNombre(dto.getNombre());
-                }
-            }
+        if (dto.getNombre() != null && !dto.getNombre().isBlank()) {
+            cliente.setNombre(dto.getNombre());
         }
-        if(dto.getIdentificacion() != null){
-            if(!dto.getIdentificacion().isEmpty()){
-                if(!dto.getIdentificacion().isBlank()){
-                    cliente.setIdentificacion(dto.getIdentificacion());
-                }
-            }
+        if(dto.getIdentificacion() != null && !dto.getIdentificacion().isBlank()){
+            cliente.setIdentificacion(dto.getIdentificacion());
         }
-        if(dto.getCorreo() != null){
-            if(!dto.getCorreo().isEmpty()){
-                if(!dto.getCorreo().isBlank()){
-                    cliente.setCorreo(dto.getCorreo());
-                }
-            }
+        if(dto.getCorreo() != null && !dto.getCorreo().isBlank()){
+            cliente.setCorreo(dto.getCorreo());
         }
-        if(dto.getPasword() != null){
-            if(!dto.getPasword().isEmpty()){
-                if(!dto.getPasword().isBlank()){
-                    cliente.setPasword(dto.getPasword());
-                }
-            }
+        if(dto.getPasword() != null && !dto.getPasword().isBlank()){
+            cliente.setPasword(dto.getPasword());
         }
-        if(dto.getEdad() != null){
-            if(dto.getEdad() > 18){
-                cliente.setEdad(dto.getEdad());
-            }
+        if(dto.getEdad() != null && dto.getEdad() > 18){
+            cliente.setEdad(dto.getEdad());
         }
         if(dto.getActivo() != null){
             cliente.setActivo(dto.getActivo());
