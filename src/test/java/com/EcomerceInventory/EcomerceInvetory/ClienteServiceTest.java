@@ -6,6 +6,7 @@ import com.EcomerceInventory.EcomerceInvetory.model.Cliente;
 import com.EcomerceInventory.EcomerceInvetory.model.TarjetaPuntos;
 import com.EcomerceInventory.EcomerceInvetory.repository.ClienteRepository;
 import com.EcomerceInventory.EcomerceInvetory.service.ClienteService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

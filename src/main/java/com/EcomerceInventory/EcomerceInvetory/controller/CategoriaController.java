@@ -11,8 +11,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/categorias")
 @Tag(name = "Categoria", description = "Operaciones relacionadsa con las categorias")
@@ -29,7 +27,7 @@ public class CategoriaController {
 
     @Operation(summary = "Consulta Categoria Nombre", description = "Consulta categorias por nombre")
     @GetMapping("/categoria/{nombre}")
-    public ResponseEntity<List<Categoria>> consultarCategoriaNombre(@PathVariable String nombre){
+    public ResponseEntity<Categoria> consultarCategoriaNombre(@PathVariable String nombre){
         return ResponseEntity.ok(categoriaService.consultarCategoriaNombre(nombre));
     }
 }

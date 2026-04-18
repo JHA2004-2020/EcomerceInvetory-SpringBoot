@@ -21,10 +21,7 @@ public class CategoriaService {
     }
 
     //Consulta categoria por nombre
-    public List<Categoria> consultarCategoriaNombre(String nombre){
-        if(categoriaRepository.findAll().isEmpty()){
-            throw new ResourceNotFoundException("No hay categorias disponibles");
-        }
-        return categoriaRepository.findAll();
+    public Categoria consultarCategoriaNombre(String nombre){
+        return categoriaRepository.findCategoriaByNombre(nombre);
     }
 }
