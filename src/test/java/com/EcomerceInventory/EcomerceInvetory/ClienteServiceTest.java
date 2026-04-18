@@ -37,7 +37,6 @@ class ClienteServiceTest {
 
 
     private Cliente clienteEjemplo;
-    private ClienteDTO clienteDTOEjemplo;
 
     @BeforeEach
     void setUp() {
@@ -52,7 +51,7 @@ class ClienteServiceTest {
         clienteEjemplo.setPasword("segura123");
 
 
-        clienteDTOEjemplo = new ClienteDTO();
+        ClienteDTO clienteDTOEjemplo = new ClienteDTO();
         clienteDTOEjemplo.setActivo(true);
         clienteDTOEjemplo.setNombre("Juan Perez");
         clienteDTOEjemplo.setIdentificacion("12345");
@@ -160,9 +159,7 @@ class ClienteServiceTest {
         Long IdInvalido = 376L;
         when(clienteRepository.findById(IdInvalido)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> {
-            clienteService.listarClienteId(IdInvalido);
-        });
+        assertThrows(ResourceNotFoundException.class, () -> clienteService.listarClienteId(IdInvalido));
     }
 
     //Busqueda por Nombre
