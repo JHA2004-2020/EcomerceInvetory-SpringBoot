@@ -44,7 +44,7 @@ public class ClienteService {
     public Page<ClienteDTO> listarPaginaCliente(int numeroPagina, int size){
         Pageable paginacion = PageRequest.of(numeroPagina, size, Sort.by("nombre").ascending());
         Page<Cliente> clientes = clienteRepository.findAll(paginacion);
-        return clientes.map(cliente -> convertirADTO(cliente));
+        return clientes.map(this::convertirADTO);
     }
 
     //ListarClienteId

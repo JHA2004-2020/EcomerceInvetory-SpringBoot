@@ -114,7 +114,7 @@ public class ProductoServiceTest {
     //Busqueda por id
     @Test
     @DisplayName("Busqueda exitosa por id")
-    void productoIdIExistenteTest() {
+    void productoIdExistenteTest() {
         //Arrancar
         when(productoRepository.findById(1L)).thenReturn(Optional.of(productoEjemplo));
 

@@ -2,7 +2,6 @@ package com.EcomerceInventory.EcomerceInvetory.service;
 
 import com.EcomerceInventory.EcomerceInvetory.dto.DetallesFacturaDTO;
 import com.EcomerceInventory.EcomerceInvetory.dto.FacturaDTO;
-import com.EcomerceInventory.EcomerceInvetory.dto.ProductoDTO;
 import com.EcomerceInventory.EcomerceInvetory.exception.ResourceNotFoundException;
 import com.EcomerceInventory.EcomerceInvetory.model.Cliente;
 import com.EcomerceInventory.EcomerceInvetory.model.DetallesFactura;
@@ -60,8 +59,8 @@ public class FacturaService {
 
     //Consultar facturas por id del cliente
     public List<FacturaDTO> consultarFacturaClienteId(Long clienteId){
-        Cliente cliente = clienteRepository.findById(clienteId).orElseThrow(() -> new ResourceNotFoundException("Cliente no existente"));
-        List<Factura> facturas = cliente.getFacturas();
+        clienteRepository.findById(clienteId).orElseThrow(() -> new ResourceNotFoundException("Cliente no existente"));
+        List<Factura> facturas = facturaRepository.findFacturaByCliente_Id(clienteId);
         return facturas.stream().map(this::convertirADTO).toList();
     }
 
@@ -70,12 +69,12 @@ public class FacturaService {
     //Crear una lista de productos como detalles de la factura
     public List<DetallesFactura> crearDetallesFactura(List<DetallesFacturaDTO> detallesFacturasdto){
         List<DetallesFactura> detallesFactura = new ArrayList<>();
-        Double total = 0.0;
-        for (int i = 0; i < detallesFacturasdto.size(); i++) {
-            Producto producto = productoRepository.findById(detallesFacturasdto.get(i).getProductoId()).orElseThrow(() -> new ResourceNotFoundException("Este producto no existe"));
+
+        for (DetallesFacturaDTO detallesFacturaDTO : detallesFacturasdto) {
+            Producto producto = productoRepository.findById(detallesFacturaDTO.getProductoId()).orElseThrow(() -> new ResourceNotFoundException("Este producto no existe"));
             DetallesFactura df = new DetallesFactura();
-            df.setCantidad(detallesFacturasdto.get(i).getCantidad());
-            df.setPrecioMomento(producto.getPrecio()*detallesFacturasdto.get(i).getCantidad());
+            df.setCantidad(detallesFacturaDTO.getCantidad());
+            df.setPrecioMomento(producto.getPrecio() * detallesFacturaDTO.getCantidad());
             df.setProducto(producto);
             detallesFactura.add(df);
         }
@@ -98,19 +97,19 @@ public class FacturaService {
     public FacturaDTO crearFacturaCompleta(List<DetallesFacturaDTO> detallesFacturasdto, Long clienteId) throws Exception {
         List<DetallesFactura> detallesFacturas = crearDetallesFactura(detallesFacturasdto);
         Factura factura = crearFactura(clienteId);
-
         factura.setTotal(0.0);
         for (int i = 0; i < detallesFacturas.size(); i++) {
-            factura.setTotal(factura.getTotal()+detallesFacturas.get(i).getPrecioMomento());
             Producto producto = detallesFacturas.get(i).getProducto();
             if (producto.getStock() < detallesFacturasdto.get(i).getCantidad()){
                 throw new Exception("Stock insuficiente");
             }
+            factura.setTotal(factura.getTotal()+detallesFacturas.get(i).getPrecioMomento());
             producto.setStock(producto.getStock()-detallesFacturas.get(i).getCantidad());
             detallesFacturas.get(i).setFactura(factura);
             productoRepository.save(producto);
             detallesFacturaRepository.save(detallesFacturas.get(i));
         }
+        factura.setDetallesFacturas(detallesFacturas);
         facturaRepository.save(factura);
 
         return convertirADTO(factura);

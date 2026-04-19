@@ -12,12 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
-import java.util.List;
+
 import java.util.Optional;
 
 import static org.mockito.Mockito.*; // Para when, times, any, etc.
@@ -65,9 +61,7 @@ public class CategoriaServiceTest {
         when(categoriaRepository.findById(idInvalido)).thenReturn(Optional.empty());
 
         //Actuar/Acertar
-        assertThrows(ResourceNotFoundException.class, () -> {
-            categoriaService.consultarCategoriaId(idInvalido);
-        });
+        assertThrows(ResourceNotFoundException.class, () -> categoriaService.consultarCategoriaId(idInvalido));
 
         verify(categoriaRepository, times(1)).findById(idInvalido);
     }
@@ -89,5 +83,4 @@ public class CategoriaServiceTest {
 
         verify(categoriaRepository, times(1)).findCategoriaByNombre(nombre);
     }
-
 }
