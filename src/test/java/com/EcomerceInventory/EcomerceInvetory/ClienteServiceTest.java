@@ -34,8 +34,6 @@ class ClienteServiceTest {
     @InjectMocks
     private ClienteService clienteService; // Inyecta el mock del repo en el servicio real
 
-
-
     private Cliente clienteEjemplo;
 
     @BeforeEach
