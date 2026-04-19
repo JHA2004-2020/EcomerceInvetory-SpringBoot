@@ -103,5 +103,3 @@ spring.jpa.hibernate.ddl-auto=update
 4. Acceder a la documentación de Swagger en: `http://localhost:8080/swagger-ui.html` (o la ruta configurada).
 
 ---
-
-¡Este documento te hará ver como un profesional ante los reclutadores del Éxito! ¿Necesitas que detallemos algún endpoint específico?
